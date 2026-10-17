@@ -56,7 +56,7 @@ def short_chat_text(tok, row):
     return D.render(tok, [{"role": "user", "content": user}, {"role": "assistant", "content": row["output"]}])
 
 
-def build_calib(tok, source, keep_roles, seed, match_effective=False, budget=CALIB_TOKENS):
+def build_calib(tok, source, keep_roles, seed, match_effective=False, budget=CALIB_TOKENS, role_list=None):
     """(ids[1,L], keep[1,L]) batches. The budget counts raw tokens, or kept tokens if match_effective.
     Calibration draws use seeds 1000+seed; the eval set uses 424242, and alpaca rows are split in half."""
     r = random.Random(1000 + seed)
@@ -74,6 +74,8 @@ def build_calib(tok, source, keep_roles, seed, match_effective=False, budget=CAL
         i += 1
         ids, roles = D.tokenize_with_roles(tok, text, SEQ_LEN)
         roles = np.array(roles)
+        if role_list is not None:
+            role_list.append(torch.tensor(roles))
         counts += np.bincount(roles, minlength=len(D.ROLES))
         keep = np.ones(len(ids), bool) if keep_roles is None else np.isin(roles, [D.ROLE_ID[k] for k in keep_roles])
         batches.append((torch.tensor([ids]), torch.tensor(keep)[None]))
