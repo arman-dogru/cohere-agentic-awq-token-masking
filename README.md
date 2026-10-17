@@ -63,7 +63,18 @@ conditions. Seed-to-seed SD is reported separately.
 
 ## Results
 
-*Pending: the main grid (fp, rtn, 3 AWQ conditions × 3 seeds) is running.* See `results/summary.md`.
+*Partial: the baselines are in; the AWQ cells (3 conditions × 3 seeds) are running.* Full tables: `results/summary.md`.
+
+| condition | tool-call exact | tool-call NLL/tok | answer NLL/tok | short-chat NLL/tok | MMLU-lite (400) |
+|---|---|---|---|---|---|
+| fp32 | 0.564 [0.518, 0.611] | 0.079 | 2.401 | 1.686 | 0.445 [0.395, 0.493] |
+| W4 RTN | 0.467 [0.418, 0.514] | 0.117 | 2.572 | 1.830 | 0.340 [0.295, 0.385] |
+| **RTN − fp (paired)** | **−0.098 [−0.141, −0.052]** | +0.038 [+0.032, +0.045] | +0.170 | +0.144 | −0.105 [−0.157, −0.055] |
+
+Plain W4 rounding costs about 10 points of tool-call exact match and 10 points of MMLU-lite, so there is
+real headroom for calibration to recover. The fp model itself gets 56% of calls exactly right
+(teacher-forced over 339 calls in 200 episodes); its misses are wrong tool choice, value casing
+("Port" vs "port") and prose instead of a call.
 
 ## Reproduce
 
