@@ -73,7 +73,7 @@ conditions. Seed-to-seed SD is reported separately.
 
 Plain W4 rounding costs about 10 points of tool-call exact match and 10 points of MMLU-lite, so there is
 real headroom for calibration to recover. The fp model itself gets 56% of calls exactly right
-(teacher-forced over 339 calls in 200 episodes); its misses are wrong tool choice, value casing
+(teacher-forced over 420 calls in 200 episodes); its misses are wrong tool choice, value casing
 ("Port" vs "port") and prose instead of a call.
 
 ## Reproduce
