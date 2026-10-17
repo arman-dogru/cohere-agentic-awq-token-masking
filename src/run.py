@@ -117,16 +117,21 @@ def score_text(model, tok, text):
     gold token at every position, i.e. greedy decoding from that prefix reproduces the gold exactly."""
     ids, roles = D.tokenize_with_roles(tok, text)
     x = torch.tensor([ids])
-    logits = model(input_ids=x).logits[0].float()
+    sps = spans(roles, D.ROLE_ID["assistant"])
+    h = model.model(input_ids=x).last_hidden_state[0]
+    prev_all = torch.tensor([p - 1 for sp in sps for p in sp])
+    logits = model.lm_head(h[prev_all]).float()          # only the positions we score (saves ~L x 151k floats)
     logp = torch.log_softmax(logits, -1)
     pred = logits.argmax(-1)
-    res = []
-    for sp in spans(roles, D.ROLE_ID["assistant"]):
-        pos = torch.tensor(sp)
-        tgt, prev = x[0, pos], pos - 1
-        ok = pred[prev] == tgt
+    res, o = [], 0
+    for sp in sps:
+        k = len(sp)
+        tgt = x[0, torch.tensor(sp)]
+        rows = torch.arange(o, o + k)
+        o += k
+        ok = pred[rows] == tgt
         kind = "call" if "<tool_call>" in tok.decode(tgt) else "answer"
-        res.append({"kind": kind, "n": len(sp), "nll": float(-logp[prev, tgt].sum()), "correct": int(ok.sum()), "exact": bool(ok.all())})
+        res.append({"kind": kind, "n": k, "nll": float(-logp[rows, tgt].sum()), "correct": int(ok.sum()), "exact": bool(ok.all())})
     return res
 
 
@@ -140,7 +145,8 @@ def mmlu(model, tok, n):
     for it in items:
         q = it["question"] + "\n" + "\n".join(f"{l}. {c}" for l, c in zip(letters, it["choices"])) + "\nAnswer with the letter only."
         p = tok.apply_chat_template([{"role": "user", "content": q}], tokenize=False, add_generation_prompt=True)
-        lg = model(input_ids=torch.tensor([tok.encode(p, add_special_tokens=False)])).logits[0, -1]
+        h = model.model(input_ids=torch.tensor([tok.encode(p, add_special_tokens=False)])).last_hidden_state[0, -1]
+        lg = model.lm_head(h)
         out.append(int(int(lg[lid].argmax()) == it["answer"]))
     return out
 
@@ -182,9 +188,14 @@ def main():
     aq = Q.ActQuant(model) if a.a8 else None
     agentic, chat = eval_sets(tok, a.n_agentic, a.n_chat)
     meta["eval_sha"] = hashlib.sha256(("".join(agentic) + "".join(chat)).encode()).hexdigest()[:16]
-    res = {"agentic": [score_text(model, tok, t) for t in agentic],
-           "chat": [score_text(model, tok, t) for t in chat],
-           "mmlu": mmlu(model, tok, a.n_mmlu) if a.n_mmlu else []}
+    res = {"agentic": [], "chat": []}
+    for name, texts in (("agentic", agentic), ("chat", chat)):
+        for j, t in enumerate(texts):
+            res[name].append(score_text(model, tok, t))
+            if j % 50 == 49:
+                print(f"{name} {j + 1}/{len(texts)} t={time.time() - t0:.0f}s", flush=True)
+    res |= {
+"mmlu": mmlu(model, tok, a.n_mmlu) if a.n_mmlu else []}
     if aq:
         aq.remove()
     meta["t_total_s"] = round(time.time() - t0, 1)
