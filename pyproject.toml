@@ -1,0 +1,31 @@
+[project]
+name = "cohere-agentic-awq-token-masking"
+version = "0.1.0"
+description = "CPU study of AWQ token masking for agentic calibration data (W4A8-inspired) on Qwen2.5-0.5B-Instruct"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = "==3.13.*"
+dependencies = [
+    "torch==2.14.1",
+    "transformers==5.20.1",
+    "numpy==2.5.4",
+    "pyarrow==26.0.0",
+]
+
+[dependency-groups]
+dev = ["pytest==9.1.1"]
+
+[tool.uv]
+package = false
+
+# CPU-only torch wheels come from the PyTorch index; everything else from PyPI.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
