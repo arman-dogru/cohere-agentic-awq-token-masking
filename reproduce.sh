@@ -8,8 +8,12 @@ cd "$(dirname "$0")"
 STAGE=${1:-main}
 uv sync --frozen
 mkdir -p data results/raw logs
-[ -f data/mmlu_test.parquet ] || curl -sfL -o data/mmlu_test.parquet https://huggingface.co/api/datasets/cais/mmlu/parquet/all/test/0.parquet
-[ -f data/alpaca.parquet ] || curl -sfL -o data/alpaca.parquet https://huggingface.co/api/datasets/tatsu-lab/alpaca/parquet/default/train/0.parquet
+fetch() {  # fetch <file> <url>: retried, and written to .part first so an interrupted download never looks finished
+  [ -f "data/$1" ] && return
+  curl -sSfL --retry 5 --retry-all-errors --retry-delay 3 -o "data/$1.part" "$2" && mv "data/$1.part" "data/$1"
+}
+fetch mmlu_test.parquet https://huggingface.co/api/datasets/cais/mmlu/parquet/all/test/0.parquet
+fetch alpaca.parquet https://huggingface.co/api/datasets/tatsu-lab/alpaca/parquet/default/train/0.parquet
 (cd data && sha256sum -c SHA256SUMS)
 EVAL="--n-agentic 200 --n-chat 150 --n-mmlu 400 --threads ${THREADS:-4}"
 run() {  # run <cond> <seed> [extra args]
