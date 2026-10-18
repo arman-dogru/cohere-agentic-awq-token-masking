@@ -72,7 +72,10 @@ ORDER = ["fp", "rtn", "awq_short", "awq_long_nomask", "awq_long_masked", "awq_lo
          "awq_long_masked_matched", "awq_long_template_only"]
 PAIRS = [("awq_long_masked", "awq_short"), ("awq_long_masked", "awq_long_nomask"), ("awq_long_nomask", "awq_short"),
          ("awq_short", "rtn"), ("awq_long_masked", "rtn"), ("awq_long_masked_strict", "awq_long_masked"),
-         ("awq_long_masked_matched", "awq_long_masked"), ("awq_long_template_only", "awq_long_nomask")]
+         ("awq_long_masked_matched", "awq_long_masked"), ("awq_long_template_only", "awq_long_nomask"),
+         ("awq_long_masked_a8", "awq_long_nomask_a8"), ("awq_long_masked_a8", "awq_short_a8"),
+         ("awq_long_nomask_a8", "awq_short_a8"), ("rtn_a8", "rtn"), ("fp_a8", "fp"),
+         ("rtn_fp8", "rtn"), ("rtn_fp8_channel", "rtn"), ("rtn_fp8_channel", "rtn_fp8")]
 
 
 def main():
@@ -92,6 +95,17 @@ def main():
             row = {m: boot(runs[a], runs[b], m) for m in METRICS}
             out["pairs"][f"{a} - {b}"] = row
             lines.append(f"| {a} − {b} | " + " | ".join(f"{row[m]['est']:+.3f} [{row[m]['lo']:+.3f}, {row[m]['hi']:+.3f}]" for m in METRICS) + " |")
+    lines += ["", "Per calibration seed (point estimates on the full eval set; the CIs above resample eval items only,",
+              "so seed-to-seed spread is listed here separately):", "",
+              "| condition | " + " | ".join(METRICS) + " |", "|---|" + "---|" * len(METRICS)]
+    for t in tags:
+        if len(runs[t]) > 1:
+            cells = []
+            for m in METRICS:
+                block, fn = METRICS[m]
+                v = [stat(runs[t][s][block], fn) for s in sorted(runs[t])]
+                cells.append(" / ".join(f"{x:.3f}" for x in v) + f" (sd {np.std(v, ddof=1):.3f})")
+            lines.append(f"| {t} | " + " | ".join(cells) + " |")
     (ROOT / "results/summary.md").write_text("\n".join(lines) + "\n")
     (ROOT / "results/summary.json").write_text(json.dumps(out, indent=1))
     print("\n".join(lines))
