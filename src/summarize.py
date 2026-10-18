@@ -48,10 +48,10 @@ def load():
     return runs
 
 
-def boot(runs_a, runs_b=None, metric="call_exact", seed=0):
+def boot(runs_a, runs_b=None, metric="call_exact", seed=0, metrics=None):
     """Point estimate and 95% CI. Value per resample = mean over calibration seeds of the metric
     (minus the same for runs_b if given). Seeds of fp/rtn are deterministic (single run)."""
-    block, fn = METRICS[metric]
+    block, fn = (metrics or METRICS)[metric]
     n = len(next(iter(runs_a.values()))[block])
     rng = np.random.default_rng(seed)
 

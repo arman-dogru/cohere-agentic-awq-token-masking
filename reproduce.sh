@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Cold-install reproduction: deps, data (sha256-checked), grid (resumable: finished cells are skipped), tables.
-# Usage: ./reproduce.sh [main|ablations|all]   (THREADS=4 by default)
+# Usage: ./reproduce.sh [main|ablations|heldout|all|smoke]   (THREADS=4 by default)
+#   heldout: held-out-tools split + free-generation error analysis (src/heldout.py), then src/report.py
+#   smoke:   unit tests + a few-item run of src.run and src.heldout into results/smoke (minutes, cold-install check)
 set -euo pipefail
 cd "$(dirname "$0")"
 STAGE=${1:-main}
@@ -27,8 +29,26 @@ jobs_ablations() {
   for s in 0 1 2; do run awq_short $s --a8; run awq_long_nomask $s --a8; run awq_long_masked $s --a8; done
   run rtn 0 --scale-dtype fp8; run rtn 0 --scale-dtype fp8_channel
 }
+ho() {  # ho <cond> <seed>: held-out tools (teacher-forced) + free generation on held-out and in-distribution prompts
+  local c=$1 s=$2
+  [ -f "results/heldout/${c}__s${s}.json" ] && { echo "skip heldout $c s$s"; return; }
+  uv run python -m src.heldout --cond "$c" --seed "$s" --threads "${THREADS:-4}" > "logs/heldout_${c}__s${s}.log" 2>&1
+  tail -1 "logs/heldout_${c}__s${s}.log"
+}
+jobs_heldout() {
+  ho fp 0; ho rtn 0
+  for s in 0 1 2; do ho awq_short $s; ho awq_long_nomask $s; ho awq_long_masked $s; done
+}
+jobs_smoke() {
+  uv run pytest -q
+  uv run python -m src.run --cond rtn --seed 0 --n-agentic 3 --n-chat 3 --n-mmlu 5 --threads "${THREADS:-4}" --out results/smoke
+  uv run python -m src.heldout --cond rtn --seed 0 --n-episodes 3 --n-gen 2 --threads "${THREADS:-4}" --out results/smoke
+}
 [ "${SOURCE_ONLY:-0}" = 1 ] && return 0
 case $STAGE in
-  main) jobs_main;; ablations) jobs_ablations;; all) jobs_main; jobs_ablations;;
+  main) jobs_main;; ablations) jobs_ablations;; heldout) jobs_heldout;; all) jobs_main; jobs_ablations; jobs_heldout;;
+  smoke) jobs_smoke; exit 0;;
+  *) echo "unknown stage $STAGE" >&2; exit 2;;
 esac
 uv run python -m src.summarize
+if [ "$STAGE" = heldout ] || [ "$STAGE" = all ]; then uv run python -m src.report; fi
