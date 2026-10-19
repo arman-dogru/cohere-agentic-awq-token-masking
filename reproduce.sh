@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cold-install reproduction: deps, data (sha256-checked), grid (resumable: finished cells are skipped), tables.
+# Cold-install reproduction: deps, data (sha256-checked), grid (resumable: finished cells are skipped), tables, figures.
 # Usage: ./reproduce.sh [main|ablations|heldout|all|smoke]   (THREADS=4 by default)
 #   heldout: held-out-tools split + free-generation error analysis (src/heldout.py), then src/report.py
 #   smoke:   unit tests + a few-item run of src.run and src.heldout into results/smoke (minutes, cold-install check)
@@ -51,8 +51,12 @@ jobs_smoke() {
 [ "${SOURCE_ONLY:-0}" = 1 ] && return 0
 case $STAGE in
   main) jobs_main;; ablations) jobs_ablations;; heldout) jobs_heldout;; all) jobs_main; jobs_ablations; jobs_heldout;;
-  smoke) jobs_smoke; exit 0;;
+  smoke) jobs_smoke
+         # regenerate README figures from whatever results exist (smoke itself writes to results/smoke)
+         if [ -f results/summary.json ]; then uv run python -m src.figures; fi
+         exit 0;;
   *) echo "unknown stage $STAGE" >&2; exit 2;;
 esac
 uv run python -m src.summarize
+uv run python -m src.figures
 if [ "$STAGE" = heldout ] || [ "$STAGE" = all ]; then uv run python -m src.report; fi
