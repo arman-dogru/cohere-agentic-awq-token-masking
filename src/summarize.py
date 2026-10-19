@@ -71,7 +71,7 @@ def boot(runs_a, runs_b=None, metric="call_exact", seed=0, metrics=None):
 ORDER = ["fp", "rtn", "awq_short", "awq_long_nomask", "awq_long_masked", "awq_long_masked_strict",
          "awq_long_masked_matched", "awq_long_template_only"]
 PAIRS = [("awq_long_masked", "awq_short"), ("awq_long_masked", "awq_long_nomask"), ("awq_long_nomask", "awq_short"),
-         ("awq_short", "rtn"), ("awq_long_masked", "rtn"), ("awq_long_masked_strict", "awq_long_masked"),
+         ("awq_short", "rtn"), ("awq_long_nomask", "rtn"), ("awq_long_masked", "rtn"), ("awq_long_masked_strict", "awq_long_masked"),
          ("awq_long_masked_matched", "awq_long_masked"), ("awq_long_template_only", "awq_long_nomask"),
          ("awq_long_masked_a8", "awq_long_nomask_a8"), ("awq_long_masked_a8", "awq_short_a8"),
          ("awq_long_nomask_a8", "awq_short_a8"), ("rtn_a8", "rtn"), ("fp_a8", "fp"),
