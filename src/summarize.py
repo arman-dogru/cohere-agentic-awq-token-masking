@@ -90,11 +90,14 @@ def main():
         lines.append(f"| {t} | {row['call_exact']['n_seeds']} | " + " | ".join(cells) + " |")
     lines += ["", "Paired deltas (A − B; same eval items; 95% cluster-bootstrap CI; mean over calibration seeds):", "",
               "| A − B | " + " | ".join(METRICS) + " |", "|---|" + "---|" * len(METRICS)]
+    seen_pairs = set()
     for a, b in PAIRS + [(t, "fp") for t in tags if t != "fp"]:
-        if a in runs and b in runs:
-            row = {m: boot(runs[a], runs[b], m) for m in METRICS}
-            out["pairs"][f"{a} - {b}"] = row
-            lines.append(f"| {a} − {b} | " + " | ".join(f"{row[m]['est']:+.3f} [{row[m]['lo']:+.3f}, {row[m]['hi']:+.3f}]" for m in METRICS) + " |")
+        if a not in runs or b not in runs or (a, b) in seen_pairs:
+            continue
+        seen_pairs.add((a, b))
+        row = {m: boot(runs[a], runs[b], m) for m in METRICS}
+        out["pairs"][f"{a} - {b}"] = row
+        lines.append(f"| {a} − {b} | " + " | ".join(f"{row[m]['est']:+.3f} [{row[m]['lo']:+.3f}, {row[m]['hi']:+.3f}]" for m in METRICS) + " |")
     lines += ["", "Per calibration seed (point estimates on the full eval set; the CIs above resample eval items only,",
               "so seed-to-seed spread is listed here separately):", "",
               "| condition | " + " | ".join(METRICS) + " |", "|---|" + "---|" * len(METRICS)]

@@ -54,6 +54,10 @@ over every `<tool_call>` span). Numbers from `results/summary.md` after
 | **nomask − short** | **+0.063 [+0.023, +0.104]** |
 | strict − masked | −0.071 [−0.097, −0.044] |
 | RTN − fp32 | −0.098 [−0.141, −0.052] |
+| template-only − nomask | +0.016 [−0.006, +0.038] |
+
+The inverse-mask ablation (`awq_long_template_only`, highest AWQ mean 0.498) vs nomask is
+`+0.016 [−0.006, +0.038]`; the CI crosses zero, so it does not overturn the null.
 
 ![Main conditions vs baselines: call_exact and MMLU-lite with 95% CI error bars for fp32, RTN, AWQ short, AWQ long nomask, and AWQ long masked](docs/figures/conditions_vs_baseline.png)
 
@@ -76,6 +80,8 @@ short-chat calibration set and (b) the same agentic traces without masking?
 
 **Answer here:** (b) no — masking is negative or null (CI crosses zero on the main grid; significantly
 negative on held-out tools). (a) long calibration without masking *does* beat short-chat calibration.
+The inverse-mask ablation (`awq_long_template_only`, highest AWQ mean 0.498) vs nomask is
+`+0.016 [−0.006, +0.038]`; the CI crosses zero, so it does not overturn the null.
 
 ## Setup
 
